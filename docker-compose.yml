@@ -1,0 +1,37 @@
+# version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: edunode-mysql
+    environment:
+      MYSQL_DATABASE: edunode
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  backend:
+    build: ./backend
+    container_name: edunode-backend
+    ports:
+      - "8080:8080"
+    environment:
+      # Surcharge de la configuration de l'application.properties pour pointer vers le conteneur mysql
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/edunode?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+    depends_on:
+      - mysql
+
+  frontend:
+    build: ./frontend
+    container_name: edunode-frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql-data:
