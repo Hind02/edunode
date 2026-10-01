@@ -10,6 +10,10 @@ pipeline {
         timeout(time: 30, unit: 'MINUTES')
     }
 
+    triggers {
+        pollSCM('H/2 * * * *')
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -19,24 +23,43 @@ pipeline {
 
         stage('Build backend image') {
             steps {
-                sh 'docker build -t $BACKEND_IMAGE:$BUILD_NUMBER -t $BACKEND_IMAGE:latest ./backend'
+                sh 'docker build -t $BACKEND_IMAGE:$BUILD_NUMBER ./backend'
             }
         }
 
         stage('Build frontend image') {
             steps {
-                sh 'docker build -t $FRONTEND_IMAGE:$BUILD_NUMBER -t $FRONTEND_IMAGE:latest ./frontend'
+                sh 'docker build -t $FRONTEND_IMAGE:$BUILD_NUMBER ./frontend'
             }
         }
 
-        stage('Verify images') {
+        stage('Push to Docker Hub') {
             steps {
-                sh 'docker images | grep edunode/'
+                withCredentials([usernamePassword(credentialsId: 'dockerhub',
+                                                  usernameVariable: 'DH_USER',
+                                                  passwordVariable: 'DH_TOKEN')]) {
+                    sh '''
+                        echo "$DH_TOKEN" | docker login -u "$DH_USER" --password-stdin
+
+                        docker tag $BACKEND_IMAGE:$BUILD_NUMBER  $DH_USER/edunode-backend:$BUILD_NUMBER
+                        docker tag $BACKEND_IMAGE:$BUILD_NUMBER  $DH_USER/edunode-backend:latest
+                        docker tag $FRONTEND_IMAGE:$BUILD_NUMBER $DH_USER/edunode-frontend:$BUILD_NUMBER
+                        docker tag $FRONTEND_IMAGE:$BUILD_NUMBER $DH_USER/edunode-frontend:latest
+
+                        docker push $DH_USER/edunode-backend:$BUILD_NUMBER
+                        docker push $DH_USER/edunode-backend:latest
+                        docker push $DH_USER/edunode-frontend:$BUILD_NUMBER
+                        docker push $DH_USER/edunode-frontend:latest
+                    '''
+                }
             }
         }
     }
 
     post {
+        always {
+            sh 'docker logout || true'
+        }
         success {
             echo 'Pipeline termine avec succes.'
         }
