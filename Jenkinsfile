@@ -21,6 +21,24 @@ pipeline {
             }
         }
 
+        stage('Test backend') {
+    steps {
+        sh '''
+            docker run --rm \
+              --volumes-from jenkins \
+              -v maven-repo:/root/.m2 \
+              -w "$WORKSPACE/backend" \
+              maven:3.9.6-eclipse-temurin-21 \
+              mvn -B clean test
+        '''
+    }
+    post {
+        always {
+            junit allowEmptyResults: true, testResults: 'backend/target/surefire-reports/*.xml'
+        }
+    }
+}
+
         stage('Build backend image') {
             steps {
                 sh 'docker build -t $BACKEND_IMAGE:$BUILD_NUMBER ./backend'
