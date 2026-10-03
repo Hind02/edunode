@@ -39,6 +39,25 @@ pipeline {
     }
 }
 
+        stage('SonarQube analysis') {
+            steps {
+                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                    sh '''
+                        docker run --rm \
+                          --volumes-from jenkins \
+                          --network sonarqube_default \
+                          -v maven-repo:/root/.m2 \
+                          -e SONAR_TOKEN \
+                          -e MAVEN_OPTS="-Xmx512m" \
+                          -w "$WORKSPACE/backend" \
+                          maven:3.9.6-eclipse-temurin-21 \
+                          mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar \
+                            -Dsonar.host.url=http://sonarqube:9000
+                    '''
+                }
+            }
+        }
+
         stage('Build backend image') {
             steps {
                 sh 'docker build -t $BACKEND_IMAGE:$BUILD_NUMBER ./backend'
