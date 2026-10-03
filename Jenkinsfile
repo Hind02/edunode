@@ -72,6 +72,24 @@ pipeline {
             }
         }
 
+                stage('Trivy scan') {
+            steps {
+                sh '''
+                    for IMG in $BACKEND_IMAGE:$BUILD_NUMBER $FRONTEND_IMAGE:$BUILD_NUMBER; do
+                      echo "===== Scan de $IMG ====="
+                      docker run --rm \
+                        -v /var/run/docker.sock:/var/run/docker.sock \
+                        -v trivy-cache:/root/.cache/ \
+                        aquasec/trivy:latest image \
+                          --severity HIGH,CRITICAL \
+                          --ignore-unfixed \
+                          --exit-code 0 \
+                          "$IMG"
+                    done
+                '''
+            }
+        }
+
         stage('Push to Docker Hub') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub',
