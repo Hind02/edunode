@@ -39,7 +39,7 @@ pipeline {
     }
 }
 
-        stage('SonarQube analysis') {
+              stage('SonarQube analysis') {
             steps {
                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                     sh '''
@@ -52,7 +52,7 @@ pipeline {
                           -w "$WORKSPACE/backend" \
                           maven:3.9.6-eclipse-temurin-21 \
                           mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar \
-                            -Dsonar.host.url=http://sonarqube:9000
+                            -Dsonar.host.url=http://sonarqube:9000 \
                             -Dsonar.qualitygate.wait=true \
                             -Dsonar.qualitygate.timeout=300
                     '''
