@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.4</version> <!-- You can use a recent stable version -->
+        <version>3.5.16</version> <!-- You can use a recent stable version -->
         <relativePath /> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.edunode</groupId>
@@ -16,6 +16,8 @@
     <description>School Management System Backend</description>
     <properties>
         <java.version>21</java.version>
+        <tomcat.version>10.1.60</tomcat.version>
+        <jackson-bom.version>2.21.7</jackson-bom.version>
         <sonar.projectKey>EduNode-Backend</sonar.projectKey>
         <sonar.projectName>EduNode Backend</sonar.projectName>
         <sonar.coverage.exclusions>**/dto/**,**/entity/**,**/EdunodeApplication.java</sonar.coverage.exclusions>

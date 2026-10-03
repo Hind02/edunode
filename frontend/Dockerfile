@@ -6,6 +6,7 @@ COPY . .
 RUN npm run build --configuration=production
 
 FROM nginx:alpine
+RUN apk upgrade --no-cache
 # Copie des fichiers buildés vers Nginx
 # Attention: Avec Angular 17/18, le build se trouve dans dist/frontend/browser
 COPY --from=build /app/dist/frontend/browser /usr/share/nginx/html
@@ -13,11 +14,11 @@ COPY --from=build /app/dist/frontend/browser /usr/share/nginx/html
 RUN echo "server { \
     listen 80; \
     location / { \
-        root /usr/share/nginx/html; \
-        index index.html index.htm; \
-        try_files \$uri \$uri/ /index.html; \
+    root /usr/share/nginx/html; \
+    index index.html index.htm; \
+    try_files \$uri \$uri/ /index.html; \
     } \
-}" > /etc/nginx/conf.d/default.conf
+    }" > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
