@@ -5,12 +5,12 @@ import { Student } from '../models/student';
 import { Stats } from '../models/stats';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class StudentService {
-  private apiUrl = 'http://localhost:8080/api/students';
+  private apiUrl = '/api/students';
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {}
 
   getStudents(): Observable<Student[]> {
     return this.http.get<Student[]>(this.apiUrl);
