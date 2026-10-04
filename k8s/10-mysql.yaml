@@ -1,0 +1,82 @@
+# Disque persistant : les donnees survivent a la suppression ou au redemarrage du pod
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-data
+  namespace: edunode
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: edunode
+spec:
+  replicas: 1
+  # Recreate : on arrete l'ancien pod AVANT de lancer le nouveau.
+  # Deux MySQL ne doivent jamais ecrire en meme temps sur le meme disque.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_DATABASE
+              value: edunode
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: edunode-secrets
+                  key: mysql-root-password
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+          # Prêt = MySQL repond reellement (et pas seulement "le processus existe")
+          readinessProbe:
+            exec:
+              command:
+                [
+                  "sh",
+                  "-c",
+                  'mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD"',
+                ]
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              memory: "384Mi"
+              cpu: "100m"
+            limits:
+              memory: "768Mi"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: mysql-data
+---
+# Adresse interne stable : les autres pods joignent MySQL via "mysql:3306"
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: edunode
+spec:
+  selector:
+    app: mysql
+  ports:
+    - port: 3306
+      targetPort: 3306

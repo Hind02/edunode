@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: edunode
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      # Equivalent de "depends_on" de docker-compose : on attend que MySQL reponde
+      # avant de lancer Spring Boot (sinon il plante au demarrage).
+      initContainers:
+        - name: wait-for-mysql
+          image: busybox:1.36
+          command:
+            [
+              "sh",
+              "-c",
+              "until nc -z mysql 3306; do echo 'attente de MySQL...'; sleep 3; done",
+            ]
+      containers:
+        - name: backend
+          # A remplacer par le tag du dernier build Jenkins reussi
+          image: hind02/edunode-backend:36
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://mysql:3306/edunode?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: root
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: edunode-secrets
+                  key: mysql-root-password
+            - name: EDUNODE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: edunode-secrets
+                  key: api-key
+            # La JVM utilise 60 % de la memoire du conteneur pour son tas
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:MaxRAMPercentage=60"
+          # Pret = l'API repond et sait lire la base
+          readinessProbe:
+            httpGet:
+              path: /api/students
+              port: 8080
+            initialDelaySeconds: 40
+            periodSeconds: 10
+            timeoutSeconds: 5
+          # Vivant = le port repond ; sinon Kubernetes redemarre le pod
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 90
+            periodSeconds: 20
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "640Mi"
+---
+# Adresse interne stable : nginx (frontend) joint le backend via "backend:8080"
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: edunode
+spec:
+  selector:
+    app: backend
+  ports:
+    - port: 8080
+      targetPort: 8080
